@@ -4,9 +4,17 @@ const fs = require('fs');
 
 const parser = new Parser();
 
-const RSS_URL = process.env.RSS_URL;
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
+
+const RSS_FEEDS = [
+  "https://www.moneycontrol.com/rss/MCtopnews.xml",
+  "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms",
+  "https://www.livemint.com/rss/markets",
+  "https://www.coindesk.com/arc/outboundfeeds/rss/",
+  "https://techcrunch.com/feed/",
+  "https://www.reutersagency.com/feed/?best-topics=business-finance&post_type=best"
+];
 
 let posted = [];
 
@@ -27,27 +35,31 @@ async function sendMessage(text) {
 
 async function run() {
   try {
-    const feed = await parser.parseURL(RSS_URL);
 
-    for (let item of feed.items.slice(0, 5)) {
+    for (let feedUrl of RSS_FEEDS) {
 
-      if (!posted.includes(item.link)) {
+      const feed = await parser.parseURL(feedUrl);
 
-        let message = `
+      for (let item of feed.items.slice(0, 3)) {
+
+        if (!posted.includes(item.link)) {
+
+          let message = `
 <b>${item.title}</b>
 
 Read more:
 ${item.link}
 
 👉 Follow @investpercent
-        `;
+          `;
 
-        await sendMessage(message);
+          await sendMessage(message);
 
-        posted.push(item.link);
-        fs.writeFileSync('data.json', JSON.stringify(posted));
+          posted.push(item.link);
+          fs.writeFileSync('data.json', JSON.stringify(posted));
 
-        break; // only 1 post per run
+          return; // only 1 post per run
+        }
       }
     }
 
