@@ -6,6 +6,7 @@ const parser = new Parser();
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 const RSS_FEEDS = [
   "https://www.moneycontrol.com/rss/MCtopnews.xml",
@@ -18,11 +19,12 @@ const RSS_FEEDS = [
 
 let posted = [];
 
-// load old posts
+// Load already posted links
 if (fs.existsSync('data.json')) {
   posted = JSON.parse(fs.readFileSync('data.json'));
 }
 
+// Telegram sender
 async function sendMessage(text) {
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
 
@@ -33,9 +35,43 @@ async function sendMessage(text) {
   });
 }
 
+// AI Summary Function
+async function getAISummary(title) {
+  try {
+    const res = await axios.post(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        model: "openai/gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are a financial news writer. Convert headlines into short 2-3 line insights in simple language. Add why it matters. No links. Keep it crisp."
+          },
+          {
+            role: "user",
+            content: `Convert this into a short Telegram update:\n\n${title}`
+          }
+        ]
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    return res.data.choices[0].message.content;
+
+  } catch (err) {
+    console.log("AI Error:", err.message);
+    return title; // fallback
+  }
+}
+
+// Main Runner
 async function run() {
   try {
-
     for (let feedUrl of RSS_FEEDS) {
 
       const feed = await parser.parseURL(feedUrl);
@@ -44,18 +80,21 @@ async function run() {
 
         if (!posted.includes(item.link)) {
 
-         let message = `
-🔥 Quick Update
+          // Get AI summary
+          let aiText = await getAISummary(item.title);
 
-${item.title}
+          // Final message (NO LINKS)
+          let message = `
+🔥 Market Update
 
-📊 Stay informed with daily insights
+${aiText}
 
-👉 @investpercent
-`;
+👉 Follow @investpercent
+          `;
 
           await sendMessage(message);
 
+          // Save posted link
           posted.push(item.link);
           fs.writeFileSync('data.json', JSON.stringify(posted));
 
@@ -65,8 +104,9 @@ ${item.title}
     }
 
   } catch (err) {
-    console.log(err);
+    console.log("Run Error:", err.message);
   }
 }
 
-setInterval(run, 60000); // every 1 minute
+// Run every 1 minute
+setInterval(run, 60000);
