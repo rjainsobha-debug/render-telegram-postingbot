@@ -84,13 +84,15 @@ async function run() {
           let aiText = await getAISummary(item.title);
 
           // Final message (NO LINKS)
-          let message = `
+        let aiText = await getAISummary(item.title);
+
+let message = `
 🔥 Market Update
 
 ${aiText}
 
 👉 Follow @investpercent
-          `;
+`;
 
           await sendMessage(message);
 
