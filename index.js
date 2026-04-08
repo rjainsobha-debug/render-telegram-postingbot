@@ -44,14 +44,15 @@ async function run() {
 
         if (!posted.includes(item.link)) {
 
-          let message = `
-<b>${item.title}</b>
+         let message = `
+🔥 Quick Update
 
-Read more:
-${item.link}
+${item.title}
 
-👉 Follow @investpercent
-          `;
+📊 Stay informed with daily insights
+
+👉 @investpercent
+`;
 
           await sendMessage(message);
 
